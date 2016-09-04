@@ -5,17 +5,19 @@ project(hello_gl)
 set(GLFW_ROOT "${CMAKE_SOURCE_DIR}/external/glfw")
 set(GL3W_ROOT "${CMAKE_SOURCE_DIR}/external/gl3w")
 
-set(GL3W_ARB "${GL3W_ROOT}/include/GL/glcorearb.h")
-set(GL3W_INC "${GL3W_ROOT}/include/GL/gl3w.h")
+set(GL3W_INC "${GL3W_ROOT}/include")
+set(GLFW_INC "${GLFW_ROOT}/include")
+
 set(GL3W_SRC "${GL3W_ROOT}/src/gl3w.c")
 
 if (NOT EXISTS ${GL3W_ROOT} OR NOT EXISTS ${GLFW_ROOT})
-	message(STATUS "Running git submodule update...")
+	message(STATUS "Updating submodules")
+    execute_process(COMMAND git submodule init)
 	execute_process(COMMAND git submodule update)
 endif()
 
-if (NOT ((EXISTS ${GL3W_ARB}) AND (EXISTS ${GL3W_INC}) AND (EXISTS ${GL3W_SRC})))
-	message(STATUS "Running python gl3w_gen.py")
+if (NOT EXISTS ${GL3W_SRC})
+	message(STATUS "Generating gl3w source files")
 	execute_process(COMMAND python gl3w_gen.py
 					WORKING_DIRECTORY ${GL3W_ROOT})
 endif()
@@ -36,8 +38,8 @@ add_subdirectory(${GLFW_ROOT})
 find_package(OpenGL REQUIRED)
 
 include_directories(
-	${GLFW_ROOT}/include
-	${GL3W_ROOT}/include
+	${GLFW_INC}
+	${GL3W_INC}
 	${OPENGL_INCLUDE_DIR}
 )
 

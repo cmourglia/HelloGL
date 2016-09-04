@@ -2,6 +2,11 @@
 #include <GLFW/glfw3.h>
 
 #include <stdio.h>
+
+#ifdef _WIN32
+// Math functions
+#define _USE_MATH_DEFINES
+#endif
 #include <math.h>
 
 bool InitializeRenderer();
@@ -10,9 +15,16 @@ void Render(float dt);
 
 int g_Width, g_Height;
 
+// http://www.glfw.org/docs/latest/input_guide.html
+void KeyCallback(GLFWwindow* Window, int Key, int Scancode, int Action, int Mods);
+void MouseButtonCallback(GLFWwindow* Window, int Button, int Action, int Mods);
+void MouseMoveCallback(GLFWwindow* Window, double X, double Y);
+// 
+void FramebufferSizeCallback(GLFWwindow* Window, int Width, int Height);
+
 int main()
 {
-    GLFWwindow* window;
+    GLFWwindow* Window;
     
     if (!glfwInit())
     {
@@ -20,16 +32,16 @@ int main()
         return -1;
     }
     
-    window = glfwCreateWindow(640, 480, "Hello, World", nullptr, nullptr);
-    if (!window)
+    Window = glfwCreateWindow(640, 480, "Hello, World", nullptr, nullptr);
+    if (!Window)
     {
         fprintf(stderr, "glfwCreateWindow() failed.\n");
         glfwTerminate();
         return -1;
     }
     
-    glfwMakeContextCurrent(window);
-    glfwGetFramebufferSize(window, &g_Width, &g_Height);
+    glfwMakeContextCurrent(Window);
+    glfwGetFramebufferSize(Window, &g_Width, &g_Height);
     
     if (gl3wInit())
     {
@@ -44,6 +56,11 @@ int main()
     }
     
     printf("OpenGL %s, GLSL %s\n", glGetString(GL_VERSION), glGetString(GL_SHADING_LANGUAGE_VERSION));
+
+    glfwSetKeyCallback(Window, KeyCallback);
+    glfwSetMouseButtonCallback(Window, MouseButtonCallback);
+    glfwSetCursorPosCallback(Window, MouseMoveCallback);
+    glfwSetFramebufferSizeCallback(Window, FramebufferSizeCallback);
     
     if (!InitializeRenderer())
     {
@@ -54,7 +71,7 @@ int main()
     double t0 = glfwGetTime();
     double t1;
     float dt;
-    while (!glfwWindowShouldClose(window))
+    while (!glfwWindowShouldClose(Window))
     {
         t1 = glfwGetTime();
         dt = (float)(t1 - t0);
@@ -64,28 +81,23 @@ int main()
         Update(dt);
         Render(dt);
         
-        glfwSwapBuffers(window);
+        glfwSwapBuffers(Window);
     }
     
     return 0;
 }
 
-static float g_CurrentAngle = 0.0f;
-static float g_RotationMatrix[9] = { 0.f };
-
 static GLuint g_TriangleVBO;
 static GLuint g_TriangleVAO;
 
 static GLuint g_ShaderProgram;
-static GLuint g_RotationMatrixLoc;
 
 static const char* g_VertexShader =
 "#version 450 core\n"
 "layout (location = 0) in vec3 in_Position;\n"
-"uniform mat3 u_RotationMatrix;\n"
 "void main()\n"
 "{\n"
-"    gl_Position = vec4(u_RotationMatrix * in_Position, 1.0);\n"
+"    gl_Position = vec4(in_Position, 1.0);\n"
 "}\n";
 
 static const char* g_FragmentShader =
@@ -190,20 +202,11 @@ bool InitializeRenderer()
     glDetachShader(g_ShaderProgram, FragmentShader);
     glDeleteShader(FragmentShader);
     
-    g_RotationMatrixLoc = glGetUniformLocation(g_ShaderProgram, "u_RotationMatrix");
-    
     return Result;
 }
 
 void Update(float dt)
 {
-    g_RotationMatrix[0] = cosf(g_CurrentAngle);
-    g_RotationMatrix[1] = -sinf(g_CurrentAngle);
-    g_RotationMatrix[3] = sinf(g_CurrentAngle);
-    g_RotationMatrix[4] = cosf(g_CurrentAngle);
-    g_RotationMatrix[8] = 1.0f;
-    
-    g_CurrentAngle = fmodf(g_CurrentAngle + 1.f * dt, 2.0 * M_PI);
 }
 
 void Render(float dt)
@@ -215,11 +218,30 @@ void Render(float dt)
     // Use program
     glUseProgram(g_ShaderProgram);
     
-    // Setup uniforms
-    glUniformMatrix3fv(g_RotationMatrixLoc, 1, GL_FALSE, g_RotationMatrix);
-    
     // Render triangle
     glBindVertexArray(g_TriangleVAO);
     glDrawArrays(GL_TRIANGLES, 0, 3);
     glBindVertexArray(0);
+}
+
+void KeyCallback(GLFWwindow* Window, int Key, int Scancode, int Action, int Mods)
+{
+    if (Key == GLFW_KEY_ESCAPE)
+    {
+        glfwSetWindowShouldClose(Window, true);
+    }
+}
+
+void MouseButtonCallback(GLFWwindow* Window, int Button, int Action, int Mods)
+{
+}
+
+void MouseMoveCallback(GLFWwindow* Window, double X, double Y)
+{
+}
+
+void FramebufferSizeCallback(GLFWwindow* Window, int Width, int Height)
+{
+    g_Width = Width;
+    g_Height = Height;
 }
