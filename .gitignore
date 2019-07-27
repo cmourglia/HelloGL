@@ -27,3 +27,9 @@
 *.exe
 *.out
 *.app
+
+CMakeSettings.json
+out/**
+test/**
+.vs/**
+.vscode/**
