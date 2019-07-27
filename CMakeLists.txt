@@ -1,51 +1,30 @@
-cmake_minimum_required(VERSION 3.0.2)
+cmake_minimum_required(VERSION 3.14)
 project(hello_gl)
 
-# Setup externals
-set(GLFW_ROOT "${CMAKE_SOURCE_DIR}/external/glfw")
-set(GL3W_ROOT "${CMAKE_SOURCE_DIR}/external/gl3w")
+set(CMAKE_CXX_STANDARD 20)
 
-set(GL3W_INC "${GL3W_ROOT}/include")
-set(GLFW_INC "${GLFW_ROOT}/include")
-
-set(GL3W_SRC "${GL3W_ROOT}/src/gl3w.c")
-
-if (NOT EXISTS ${GL3W_ROOT} OR NOT EXISTS ${GLFW_ROOT})
-	message(STATUS "Updating submodules")
-    execute_process(COMMAND git submodule init)
-	execute_process(COMMAND git submodule update)
+if(NOT EXISTS "${CMAKE_BINARY_DIR}/conan.cmake")
+	message(STATUS "Downloading conan.cmake from https://github.com/conan-io/cmake-conan")
+	file(DOWNLOAD "https://github.com/conan-io/cmake-conan/raw/v0.14/conan.cmake"
+	              "${CMAKE_BINARY_DIR}/conan.cmake")
 endif()
 
-if (NOT EXISTS ${GL3W_SRC})
-	message(STATUS "Generating gl3w source files")
-	execute_process(COMMAND python gl3w_gen.py
-					WORKING_DIRECTORY ${GL3W_ROOT})
-endif()
+include(${CMAKE_BINARY_DIR}/conan.cmake)
 
-# Setup c++ flags
-if (UNIX)
-    set(CMAKE_CXX_STANDARD 14) # Require c++14
-else()
-
-endif()
-
-# Compile GLFW
-set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
-set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
-set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
-add_subdirectory(${GLFW_ROOT})
+conan_cmake_run(
+	REQUIRES
+		glad/0.1.29@bincrafters/stable
+		glfw/3.3@bincrafters/stable
+	BASIC_SETUP
+		CMAKE_TARGETS
+	BUILD
+		missing
+	OPTIONS
+		glad:profile=core
+		glad:api_type=gl
+		glad:api_version=4.5)
 
 find_package(OpenGL REQUIRED)
 
-include_directories(
-	${GLFW_INC}
-	${GL3W_INC}
-	${OPENGL_INCLUDE_DIR}
-)
-
-add_executable(hello_gl src/main.cpp ${GL3W_SRC})
-target_link_libraries(
-	hello_gl
-	${OPENGL_gl_LIBRARY}
-	glfw
-)
+add_executable(hello_gl src/main.cpp)
+target_link_libraries(hello_gl OpenGL::GL CONAN_PKG::glad CONAN_PKG::glfw)
